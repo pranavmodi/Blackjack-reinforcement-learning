@@ -130,7 +130,6 @@ def start_games(num_games):
             losses += 1
         else:
             draws += 1
-
     print 'wins losses: ', wins, losses
     return sa_value, sa_counts
 
