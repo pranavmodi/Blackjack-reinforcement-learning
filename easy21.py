@@ -21,55 +21,41 @@ def calculate_score(draws):
 
 
 def draw_dealer_cards(dealer_score):
-    #print 'Delaer starts with: ', dealer_score
     while dealer_score > 0 and dealer_score < 17:
         draw_num = np.random.randint(1,11)
         draw_color = np.random.randint(1,4)
         if draw_color == 3:
-            #print 'Dealer drew red', draw_num
             dealer_score -= draw_num
         else:
-            #print 'Dealer drew black', draw_num
             dealer_score += draw_num
-        #print 'New dealer score', dealer_score
     return dealer_score
 
 
 def step(state, action):
-    #old_state = state
     new_state = state
     if action == 0:
         new_state[2] = 'T'
         player_score = state[1]
         dealer_score = draw_dealer_cards(state[0])
         if dealer_score < 1 or dealer_score > 21:
-            #print 'Dealer went bust: ', dealer_score
             return (new_state, 1)
         if dealer_score > player_score:
-            #print 'Dealer score, player score, ', dealer_score, player_score
             return (new_state, -1)
         elif dealer_score == player_score:
-            #print 'Dealer score, player score, ', dealer_score, player_score
             return (new_state, 0)
         else:
-            #print 'Dealer score, player score, ', dealer_score, player_score
             return (new_state, 1)
 
     if action == 1:
-        #print 'Drawing player card'
         draw_num = np.random.randint(1,11)
         draw_color = np.random.randint(1,4)
         player_score = state[1]
         if draw_color == 3:
-            #print 'The player drew red ', draw_num
             player_score -= draw_num
         else:
-            #print 'The player drew black ', draw_num
             player_score += draw_num
-        #print 'New player score', player_score
         state[1] = player_score
         if player_score > 21 or player_score < 1:
-            #print 'Player went bust', player_score
             state[2] = 'T'
             state[1] = player_score - draw_num
             return state, -1
@@ -102,13 +88,17 @@ def start_games(num_games):
     sa_counts = np.zeros((10,21,2))
     wins = 0
     losses = 0
-    n0 = 100
+    draws = 0
+    n0 = np.float32(100000)
     for i in range(num_games):
         ep = n0/(n0 + i)
 
-        if i % 10000 == 0:
+        if i % 100000 == 0:
             if i > 0:
-                print np.float32(wins)/np.float32(i)
+                print np.float32(wins)/(wins + losses + draws), ep
+                wins = 0
+                losses = 0
+                draws = 0
             print 'Playing game number: ', i
 
         dealer_draw = draw_till_black()
@@ -120,17 +110,14 @@ def start_games(num_games):
         while state[2] != 'T':
             ds, ps, tnt = state
             action = agent_action(state, sa_value, ep)
-            #print type(state[0]), type(state[1]), type(action)
             v = sa_value[state[0]-1, state[1]-1, action]
             sa_counts[state[0]-1, state[1]-1, action] += 1
             c = sa_counts[state[0]-1, state[1]-1, action]
             new_state, reward = step(state, action)
-            #print state, action, new_state
             if new_state[2] == 'T':
                 v = v + (reward - v)/c
                 sa_value[state[0]-1, state[1]-1, action] = v
             else:
-                #print new_state
                 r_pair = sa_value[new_state[0]-1, new_state[1]-1, :]
                 new_state_val = reward + ep_greedy_reward(r_pair, ep)
                 old_state_val = sa_value[state[0]-1, state[1]-1, action]
@@ -141,6 +128,8 @@ def start_games(num_games):
             wins += 1
         elif reward == -1:
             losses += 1
+        else:
+            draws += 1
 
     print 'wins losses: ', wins, losses
     return sa_value, sa_counts
@@ -148,9 +137,4 @@ def start_games(num_games):
 
 
 if __name__ == "__main__":
-    print 'hello easy21'
-    #sa_value, sa_counts = start_games(10)
-    #print np.float16(sa_value)
-
-
-
+    sa_value, sa_counts = start_games(1000)
